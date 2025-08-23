@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XDR Story Parser - Process Tree Visualizer</title>
+    <link rel="stylesheet" href="styles.css">
+    <meta name="description" content="Visualize Microsoft Defender XDR process trees and security events">
+    <meta name="author" content="XDR Story Parser">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header main-container">
+            <div class="header-content">
+                <div class="header-text">
+                    <h1>XDR Story Parser</h1>
+                    <p>Visualize Microsoft Defender XDR process trees and security events</p>
+                </div>
+                <div class="header-theme-selector">
+                    <label for="header-theme-select">Theme:</label>
+                    <select id="header-theme-select" onchange="xdrVisualizer.changeTheme(this.value)">
+                        <option value="cyberpunk">Cyberpunk</option>
+                        <option value="professional">Professional (light)</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <section class="upload-section" id="upload-area" role="button" tabindex="0" aria-label="Upload JSOC file">
+                <div class="upload-icon" aria-hidden="true">📁</div>
+                <div class="upload-text">Drop your JSOC file here or click to browse</div>
+                <div class="upload-subtext">Supports .json, .jsonc files with XDR story data (max 50MB)</div>
+                <input type="file" id="file-input" accept=".json,.jsonc" aria-label="Choose JSOC file">
+                <button class="btn" type="button" onclick="document.getElementById('file-input').click()">
+                    Choose File
+                </button>
+            </section>
+
+            <section class="process-tree main-container" id="process-tree" role="region" aria-label="Process tree visualization">
+                <div class="tree-header">
+                    <h2 class="tree-title">Process Tree Visualization</h2>
+                    <div class="tree-controls">
+                        <label class="anonymize-toggle">
+                            <input type="checkbox" id="anonymize-checkbox">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Anonymize Data</span>
+                        </label>
+                        <button class="btn-small" id="download-json-btn" onclick="xdrVisualizer.downloadRedactedJson()" style="display: none;">
+                            📥 Download JSON
+                        </button>
+                    </div>
+                </div>
+
+                <div class="investigation-info" id="investigation-info" style="display: none;">
+                    <div class="info-section">
+                        <div class="info-header">
+                            <span class="info-icon">👤</span>
+                            <h3>Main User</h3>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-item">
+                                <span class="info-key">User:</span>
+                                <span class="info-value" id="main-user-name">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-key">Domain:</span>
+                                <span class="info-value" id="main-user-domain">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-key">SID:</span>
+                                <span class="info-value" id="main-user-sid">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-header">
+                            <span class="info-icon">💻</span>
+                            <h3>Device Information</h3>
+                        </div>
+                        <div class="info-content">
+                            <div class="info-item">
+                                <span class="info-key">Device Name:</span>
+                                <span class="info-value" id="device-name">-</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-key">Device ID:</span>
+                                <span class="info-value" id="device-id">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tree-stats-section">
+                    <div class="tree-stats" role="complementary" aria-label="Statistics">
+                        <div class="stat-item">
+                            <span aria-hidden="true">📊</span>
+                            <span>Total Items: <span id="total-items">0</span></span>
+                        </div>
+                        <div class="stat-item">
+                            <span aria-hidden="true">⚙️</span>
+                            <span>Processes: <span id="process-count">0</span></span>
+                        </div>
+                        <div class="stat-item">
+                            <span aria-hidden="true">📄</span>
+                            <span>Files: <span id="file-count">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="type-legend main-container" role="complementary" aria-label="Legend for node types" style="display: none;">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--accent-process);" aria-hidden="true"></div>
+                    <span>Process</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--accent-file);" aria-hidden="true"></div>
+                    <span>File</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--accent-account);" aria-hidden="true"></div>
+                    <span>Account</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--accent-network);" aria-hidden="true"></div>
+                    <span>Network</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: var(--accent-info);" aria-hidden="true"></div>
+                    <span>Other</span>
+                </div>
+            </section>
+
+            <section class="tree-visualization" style="display: none;">
+                <div class="tree-container main-container" id="tree-content" role="tree" aria-label="Process tree structure"></div>
+                
+                <div class="tree-bottom-controls">
+                    <button class="btn-small" id="expand-all-btn" onclick="xdrVisualizer.expandAll()">Expand All</button>
+                    <button class="btn-small" id="collapse-all-btn" onclick="xdrVisualizer.collapseAll()">Collapse All</button>
+                    <button class="btn-small" id="screenshot-btn" onclick="xdrVisualizer.captureScreenshot()">📸 Screenshot</button>
+                </div>
+            </section>
+
+            <section class="analysis-tools main-container" id="analysis-tools" style="display: none;">
+                <div class="section-header">
+                    <h2>Analysis Tools</h2>
+                    <p>Extract and analyze specific data from the process tree</p>
+                </div>
+                
+                <div class="tools-container">
+                    <div class="tool-section">
+                        <div class="tool-buttons">
+                            <button class="btn" onclick="xdrVisualizer.extractCommandLines()">
+                                📋 Extract Command Lines
+                            </button>
+                            <button class="btn" onclick="xdrVisualizer.extractPowerShellScripts()">
+                                📜 Extract PowerShell Scripts
+                            </button>
+                        </div>
+                        
+                        <div class="tool-output">
+                            <div class="output-header">
+                                <h3 id="analysis-output-title">Analysis Results</h3>
+                                <button class="btn-small" onclick="xdrVisualizer.copyAnalysisResults()" id="copy-analysis-btn" style="display: none;">
+                                    📋 Copy to Clipboard
+                                </button>
+                            </div>
+                            <textarea id="analysis-output" class="output-textarea" placeholder="Click 'Extract Command Lines' or 'Extract PowerShell Scripts' to see results here..." readonly></textarea>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="footer">
+            <p>Made with ❤️ and bad prompts by <a href="https://cloudbrothers.info/en/">Fabian Bader</a></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

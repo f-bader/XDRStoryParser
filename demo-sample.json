@@ -1,0 +1,179 @@
+{
+  "items": [
+    {
+      "id": "root-process-1",
+      "type": "process",
+      "actionType": "process",
+      "time": "2025-08-22T10:30:00.000Z",
+      "title": {
+        "main": "explorer.exe",
+        "prefix": "[1234]",
+        "suffix": "/select,C:\\Downloads\\suspicious.exe"
+      },
+      "entity": {
+        "ProcessId": 1234,
+        "Commandline": "explorer.exe /select,C:\\Downloads\\suspicious.exe",
+        "CreatingProcessId": 4,
+        "CreatingProcessName": "System",
+        "ImageFile": {
+          "FileName": "explorer.exe",
+          "FullPath": "C:\\Windows\\explorer.exe",
+          "Sha256": "abc123def456...",
+          "Sha1": "def456abc123...",
+          "Md5": "123abc456def...",
+          "Size": 4194304
+        },
+        "User": {
+          "UserName": "john.doe",
+          "DomainName": "CORPORATE",
+          "Sid": "S-1-5-21-1234567890-987654321-1122334455-1001"
+        },
+        "CreationTime": "2025-08-22T10:30:00.000Z",
+        "IntegrityLevel": "Medium",
+        "TokenElevation": "Default"
+      },
+      "details": [
+        {
+          "key": "Command line",
+          "value": "explorer.exe /select,C:\\Downloads\\suspicious.exe",
+          "valueType": "script"
+        },
+        {
+          "key": "Process ID",
+          "value": "1234",
+          "valueType": "string"
+        },
+        {
+          "key": "Parent Process",
+          "value": "System (PID: 4)",
+          "valueType": "string"
+        }
+      ],
+      "children": [
+        {
+          "id": "child-process-1",
+          "type": "process",
+          "actionType": "process",
+          "time": "2025-08-22T10:31:15.000Z",
+          "title": {
+            "main": "suspicious.exe",
+            "prefix": "[5678]"
+          },
+          "entity": {
+            "ProcessId": 5678,
+            "Commandline": "suspicious.exe --hidden-flag",
+            "CreatingProcessId": 1234,
+            "CreatingProcessName": "explorer.exe",
+            "ImageFile": {
+              "FileName": "suspicious.exe",
+              "FullPath": "C:\\Downloads\\suspicious.exe",
+              "Sha256": "malware123hash...",
+              "Sha1": "malware456hash...",
+              "Md5": "malware789hash...",
+              "Size": 1048576
+            },
+            "User": {
+              "UserName": "john.doe",
+              "DomainName": "CORPORATE",
+              "Sid": "S-1-5-21-1234567890-987654321-1122334455-1001"
+            },
+            "CreationTime": "2025-08-22T10:31:15.000Z",
+            "IntegrityLevel": "High",
+            "TokenElevation": "Full"
+          },
+          "details": [
+            {
+              "key": "Command line",
+              "value": "suspicious.exe --hidden-flag",
+              "valueType": "script"
+            },
+            {
+              "key": "Risk Level",
+              "value": "HIGH - Suspicious behavior detected",
+              "valueType": "string"
+            }
+          ],
+          "nestedItems": [
+            {
+              "id": "file-access-1",
+              "type": "file",
+              "actionType": "file",
+              "time": "2025-08-22T10:31:20.000Z",
+              "title": {
+                "main": "config.dat",
+                "intro": "File accessed"
+              },
+              "details": [
+                {
+                  "key": "File Path",
+                  "value": "C:\\Users\\john.doe\\AppData\\Local\\Temp\\config.dat",
+                  "valueType": "string"
+                },
+                {
+                  "key": "Action",
+                  "value": "Read/Write",
+                  "valueType": "string"
+                }
+              ],
+              "children": []
+            },
+            {
+              "id": "network-connection-1",
+              "type": "network",
+              "actionType": "network",
+              "time": "2025-08-22T10:31:25.000Z",
+              "title": {
+                "main": "192.168.1.100:443",
+                "intro": "Outbound connection"
+              },
+              "details": [
+                {
+                  "key": "Remote IP",
+                  "value": "192.168.1.100",
+                  "valueType": "string"
+                },
+                {
+                  "key": "Port",
+                  "value": "443",
+                  "valueType": "string"
+                },
+                {
+                  "key": "Protocol",
+                  "value": "TCP",
+                  "valueType": "string"
+                }
+              ],
+              "children": []
+            }
+          ],
+          "children": []
+        }
+      ],
+      "nestedItems": [
+        {
+          "id": "user-account-1",
+          "type": "account",
+          "actionType": "account",
+          "time": "2025-08-22T10:30:00.000Z",
+          "title": {
+            "main": "CORPORATE\\john.doe",
+            "intro": "User account"
+          },
+          "details": [
+            {
+              "key": "SID",
+              "value": "S-1-5-21-1234567890-987654321-1122334455-1001",
+              "valueType": "string"
+            },
+            {
+              "key": "Login Time",
+              "value": "2025-08-22T08:00:00.000Z",
+              "valueType": "date"
+            }
+          ],
+          "children": []
+        }
+      ]
+    }
+  ]
+}
