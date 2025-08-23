@@ -1267,7 +1267,7 @@ class XDRTreeVisualizer {
     showNodeAndDescendants(nodeElement) {
         if (!nodeElement) return;
 
-        nodeElement.style.display = 'block';
+        nodeElement.style.display = '';
 
         // Find the associated children container
         const nodeId = nodeElement.dataset.nodeId;

@@ -798,11 +798,6 @@ body {
     transform: translateY(-1px);
 }
 
-/* Zoomed Root Node Styling */
-.zoomed-root {
-    position: relative;
-}
-
 .zoomed-root::before {
     content: '🎯';
     position: absolute;
