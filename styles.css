@@ -714,6 +714,9 @@ body {
 .tree-node {
     margin-bottom: 10px;
     position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
 }
 
 .tree-indent {
@@ -835,11 +838,12 @@ body {
     border-left: 4px solid;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    width: 1000px;
-    max-width: 75%;
     box-shadow: 0 2px 8px var(--shadow);
     position: relative;
     overflow: hidden;
+    flex-grow: 1;
+    width: auto;
+    max-width: none;
 }
 
 .node-content::before {
