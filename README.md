@@ -16,7 +16,7 @@ XDR alert stories are a special JSON format that Microsofts uses in the Defender
 1. Open the incident in the Defender XDR portal
 2. Open the **developer tools** in your browser
 3. Switch to the **network tab**
-4. Add a filter for the word **story**
+4. Add a filter for the word **story** or **timeline**
 5. Select one of the alerts you expect to be from Defender for Endpoint
 6. If you see the story element in the network tab of the Developer Tools fo to the Preview tab
 7. Right click in the top and select **Copy object**
@@ -92,6 +92,7 @@ A big thank you to Christopher Hackenschmidt, for showing me the `story` API end
 
 | Version | Release date | Release notes                                                                            |
 | ------- | ------------ | ---------------------------------------------------------------------------------------- |
+| 1.0.3   | 2025-08-24   | Add new theme "Timeline" and improve overall css                                         |
 | 1.0.2   | 2025-08-24   | Add new "Extract process tree as text" feature                                           |
 | 1.0.1   | 2025-08-24   | Improved CSS style to better use the available space and don't mess up the process tree. |
 | 1.0.0   | 2025-08-23   | Initial release                                                                          |

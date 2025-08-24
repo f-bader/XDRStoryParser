@@ -856,8 +856,7 @@ class XDRTreeVisualizer {
 
         // Build expand button for any children
         const expandButton = hasAnyChildren ?
-            `<span class="expand-button" onclick="xdrVisualizer.toggleNodeChildren('${nodeId}')" title="Click to expand/collapse children">▼</span>` :
-            '<span class="expand-placeholder"></span>';
+            `<span class="expand-button" onclick="xdrVisualizer.toggleNodeChildren('${nodeId}')" title="Click to expand/collapse children">▼</span>` : '';
 
         // Build node HTML
         nodeDiv.innerHTML = `
@@ -871,7 +870,7 @@ class XDRTreeVisualizer {
                 <div class="node-title-row">
                     <div class="node-title">
                         ${hasAlertsInTree ? '<span class="alert-indicator">🚨</span>' : ''}
-                        ${this.escapeHtml(title)}
+                        ${this.formatTimelineTitle(title, node)}
                     </div>
                     ${time ? `<div class="node-time">${time}</div>` : ''}
                 </div>
@@ -1406,6 +1405,107 @@ class XDRTreeVisualizer {
     }
 
     /**
+     * Format node title for Timeline theme with proper HTML styling
+     * @param {string} title - The raw node title
+     * @param {Object} node - The node object (for command line access)
+     * @returns {string} - HTML formatted title
+     */
+    formatTimelineTitle(title, node = null) {
+        // Check if we're in timeline theme
+        if (!document.body.classList.contains('theme-timeline')) {
+            return this.escapeHtml(title);
+        }
+
+        // Pattern to match process ID in brackets followed by process name
+        // Examples: "[1234] cmd.exe", "[5678] powershell.exe", etc.
+        const processPattern = /^(\[[\d]+\])\s+(.+)$/;
+        const match = title.match(processPattern);
+
+        let formattedTitle = '';
+        let processName = '';
+
+        if (match) {
+            const processId = match[1]; // e.g., "[1234]"
+            processName = match[2]; // e.g., "cmd.exe"
+            formattedTitle = `<span class="process-id">${this.escapeHtml(processId)}</span> <span class="process-name">${this.escapeHtml(processName)}</span>`;
+        } else {
+            // If no process ID pattern found, just make the whole title bold (likely a process name)
+            processName = title;
+            formattedTitle = `<span class="process-name">${this.escapeHtml(title)}</span>`;
+        }
+
+        // Add command line inline for Timeline theme
+        if (node) {
+            const commandLine = this.getNodeCommandLine(node);
+            if (commandLine && commandLine.trim() !== '') {
+                let cleanedCommandLine = this.unescapeForwardSlashes(commandLine.trim());
+
+                // Remove process name from beginning of command line if it's duplicated
+                const processNameLower = processName.toLowerCase();
+                const commandLineLower = cleanedCommandLine.toLowerCase();
+
+                // Handle cases where process name ends with .exe but command line might not
+                let processNameForMatching = processNameLower;
+                let processNameWithoutExt = processNameLower;
+                if (processNameLower.endsWith('.exe')) {
+                    processNameWithoutExt = processNameLower.slice(0, -4); // Remove .exe
+                }
+
+                // Check if command line starts with the process name (with or without quotes and path)
+                // Try both with and without .exe extension
+                const matchPatterns = [
+                    `"${processNameForMatching}"`,
+                    processNameForMatching,
+                    `\\${processNameForMatching}`,
+                    `"${processNameWithoutExt}"`,
+                    processNameWithoutExt,
+                    `\\${processNameWithoutExt}`
+                ];
+
+                let matchFound = false;
+                let matchedPattern = '';
+
+                for (const pattern of matchPatterns) {
+                    if (commandLineLower.startsWith(pattern) || commandLineLower.includes(pattern)) {
+                        matchedPattern = pattern;
+                        matchFound = true;
+                        break;
+                    }
+                }
+
+                if (matchFound) {
+                    // Remove the matched pattern from the beginning
+                    if (commandLineLower.startsWith(`"${processNameForMatching}"`)) {
+                        cleanedCommandLine = cleanedCommandLine.substring(`"${processName}"`.length).trim();
+                    } else if (commandLineLower.startsWith(`"${processNameWithoutExt}"`)) {
+                        cleanedCommandLine = cleanedCommandLine.substring(`"${processNameWithoutExt}"`.length).trim();
+                    } else if (commandLineLower.startsWith(processNameForMatching)) {
+                        cleanedCommandLine = cleanedCommandLine.substring(processName.length).trim();
+                    } else if (commandLineLower.startsWith(processNameWithoutExt)) {
+                        cleanedCommandLine = cleanedCommandLine.substring(processNameWithoutExt.length).trim();
+                    } else {
+                        // Handle cases where the process name is in a path
+                        const parts = cleanedCommandLine.split(' ');
+                        if (parts.length > 0) {
+                            const firstPart = parts[0].toLowerCase();
+                            if (firstPart.includes(processNameForMatching) || firstPart.includes(processNameWithoutExt)) {
+                                // Remove the first part (full path with process name) and keep the rest
+                                cleanedCommandLine = parts.slice(1).join(' ').trim();
+                            }
+                        }
+                    }
+                }
+
+                if (cleanedCommandLine) {
+                    formattedTitle += `<span class="inline-command">${this.escapeHtml(cleanedCommandLine)}</span>`;
+                }
+            }
+        }
+
+        return formattedTitle;
+    }
+
+    /**
      * Extract the subtitle from a node
      * @param {Object} node - The node
      * @returns {string|null} - The node subtitle
@@ -1425,13 +1525,35 @@ class XDRTreeVisualizer {
             return node.entity.Commandline;
         }
 
-        // Also check for WMI Query in node details
+        // Check for command line in node details array
         if (node.details && Array.isArray(node.details)) {
+            const commandLineDetail = node.details.find(detail =>
+                detail.key && detail.key.toLowerCase() === 'command line' && detail.value
+            );
+            if (commandLineDetail) {
+                return commandLineDetail.value;
+            }
+
+            // Also check for WMI Query in node details
             const wmiQuery = node.details.find(detail =>
                 detail.key && detail.key.toLowerCase().includes('wmi query') && detail.value
             );
             if (wmiQuery) {
                 return `WMI: ${wmiQuery.value}`;
+            }
+        }
+
+        // Check in additionalDetails as a fallback
+        if (node.additionalDetails && Array.isArray(node.additionalDetails)) {
+            for (const additionalDetail of node.additionalDetails) {
+                if (additionalDetail.details && Array.isArray(additionalDetail.details)) {
+                    const commandLineDetail = additionalDetail.details.find(detail =>
+                        detail.key && detail.key.toLowerCase() === 'command line' && detail.value
+                    );
+                    if (commandLineDetail) {
+                        return commandLineDetail.value;
+                    }
+                }
             }
         }
 
@@ -2343,13 +2465,35 @@ class XDRTreeVisualizer {
             return item.entity.Commandline;
         }
 
-        // Also check for WMI Query in item details
+        // Check for command line in item details array
         if (item.details && Array.isArray(item.details)) {
+            const commandLineDetail = item.details.find(detail =>
+                detail.key && detail.key.toLowerCase() === 'command line' && detail.value
+            );
+            if (commandLineDetail) {
+                return commandLineDetail.value;
+            }
+
+            // Also check for WMI Query in item details
             const wmiQuery = item.details.find(detail =>
                 detail.key && detail.key.toLowerCase().includes('wmi query') && detail.value
             );
             if (wmiQuery) {
                 return `WMI: ${wmiQuery.value}`;
+            }
+        }
+
+        // Check in additionalDetails as a fallback
+        if (item.additionalDetails && Array.isArray(item.additionalDetails)) {
+            for (const additionalDetail of item.additionalDetails) {
+                if (additionalDetail.details && Array.isArray(additionalDetail.details)) {
+                    const commandLineDetail = additionalDetail.details.find(detail =>
+                        detail.key && detail.key.toLowerCase() === 'command line' && detail.value
+                    );
+                    if (commandLineDetail) {
+                        return commandLineDetail.value;
+                    }
+                }
             }
         }
 
@@ -2551,13 +2695,13 @@ class XDRTreeVisualizer {
 
     /**
      * Change the application theme
-     * @param {string} themeName - The theme to apply ('cyberpunk' or 'professional')
+     * @param {string} themeName
      */
     changeTheme(themeName) {
         const body = document.body;
 
         // Remove existing theme classes
-        body.classList.remove('theme-cyberpunk', 'theme-professional');
+        body.classList.remove('theme-cyberpunk', 'theme-professional', 'theme-timeline');
 
         // Add new theme class
         body.classList.add(`theme-${themeName}`);
