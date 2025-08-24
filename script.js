@@ -2140,6 +2140,174 @@ class XDRTreeVisualizer {
     }
 
     /**
+     * Extract the process tree as text-only format
+     */
+    extractProcessTree() {
+        if (!this.data || !this.data.items) {
+            this.showError('No data loaded. Please upload a file first.');
+            return;
+        }
+
+        console.log('Extracting process tree as text...');
+
+        let output = '';
+
+        if (this.isZoomedMode && this.zoomedNodeId) {
+            console.log('Zoom mode active - extracting text tree from visible nodes only');
+
+            // In zoom mode, we need to reconstruct the tree from visible nodes
+            const visibleNodes = document.querySelectorAll('.tree-node');
+            const visibleTreeNodes = Array.from(visibleNodes).filter(node => node.offsetParent !== null);
+
+            output += `# Process Tree (Zoomed View)\n`;
+            output += `# Showing ${visibleTreeNodes.length} visible nodes\n`;
+            output += `# Generated: ${new Date().toLocaleString()}\n\n`;
+
+            // Build tree structure from visible DOM nodes
+            visibleTreeNodes.forEach(nodeElement => {
+                const nodeId = nodeElement.dataset.nodeId;
+                const item = this.findItemById(nodeId, this.data.items);
+
+                if (item) {
+                    const indentElement = nodeElement.querySelector('.tree-indent');
+                    const indentLevel = indentElement ? indentElement.textContent.replace(/[└├│─\s]/g, '').length / 4 : 0;
+
+                    output += this.formatNodeAsText(item, indentLevel);
+                }
+            });
+        } else {
+            // Normal mode: extract from all items recursively
+            console.log('Normal mode - extracting text tree from all nodes');
+
+            output += `# Process Tree (Complete View)\n`;
+            output += `# Total Items: ${this.stats.total}\n`;
+            output += `# Generated: ${new Date().toLocaleString()}\n\n`;
+
+            // Function to recursively build text tree from items
+            const buildTextTree = (items, level = 0) => {
+                if (!Array.isArray(items)) return;
+
+                items.forEach(item => {
+                    // Filter out nodes we don't display (same logic as renderNode)
+                    const nodeSubtitle = this.getNodeSubtitle(item);
+                    if (nodeSubtitle && (nodeSubtitle.includes('PE metadata') || nodeSubtitle.includes('User') || nodeSubtitle.includes('Web data file'))) {
+                        // Still process children
+                        if (item.children && Array.isArray(item.children)) {
+                            buildTextTree(item.children, level);
+                        }
+                        if (item.nestedItems && Array.isArray(item.nestedItems)) {
+                            buildTextTree(item.nestedItems, level);
+                        }
+                        return;
+                    }
+
+                    output += this.formatNodeAsText(item, level);
+
+                    // Recursively process children
+                    if (item.children && Array.isArray(item.children)) {
+                        buildTextTree(item.children, level + 1);
+                    }
+                    if (item.nestedItems && Array.isArray(item.nestedItems)) {
+                        buildTextTree(item.nestedItems, level + 1);
+                    }
+                });
+            };
+
+            // Build text tree from root items
+            buildTextTree(this.data.items);
+        }
+
+        if (output === '') {
+            const modeText = this.isZoomedMode ? 'visible (zoomed)' : 'loaded';
+            output = `# No process tree data found in the ${modeText} data\n# This might indicate an issue with the data structure`;
+        }
+
+        // Update the title and display in shared textarea
+        const titleElement = document.getElementById('analysis-output-title');
+        if (titleElement) {
+            const modeText = this.isZoomedMode ? ' (zoomed view)' : '';
+            titleElement.textContent = `Process Tree${modeText} (text format)`;
+        }
+
+        const textarea = document.getElementById('analysis-output');
+        if (textarea) {
+            textarea.value = output;
+        }
+
+        // Show the copy button
+        const copyBtn = document.getElementById('copy-analysis-btn');
+        if (copyBtn) {
+            copyBtn.style.display = 'inline-block';
+        }
+
+        // Show the analysis tools section
+        const analysisSection = document.getElementById('analysis-tools');
+        if (analysisSection) {
+            analysisSection.style.display = 'block';
+        }
+    }
+
+    /**
+     * Format a node as text with proper indentation and tree structure
+     * @param {Object} item - The item to format
+     * @param {number} level - The indentation level
+     * @returns {string} - Formatted text representation
+     */
+    formatNodeAsText(item, level) {
+        if (!item) return '';
+
+        // Create tree-style indentation
+        let indent = '';
+        for (let i = 0; i < level; i++) {
+            indent += '    '; // 4 spaces per level
+        }
+
+        // Get node information
+        const type = this.getItemType(item);
+        const icon = this.getNodeIcon(type, item);
+        const title = this.getNodeTitle(item);
+        const subtitle = this.getNodeSubtitle(item);
+        const commandLine = this.getNodeCommandLine(item);
+        const time = this.formatTime(item.time);
+
+        // Check if this node has alerts
+        const hasAlertsInTree = this.nodeHasAlertsInTree(item);
+        const alertIndicator = hasAlertsInTree ? '🚨 ' : '';
+
+        // Build the main line
+        let line = `${indent}${icon} ${alertIndicator}${title}`;
+
+        // Add timestamp if available
+        if (time) {
+            line += ` [${time}]`;
+        }
+
+        line += '\n';
+
+        // Add subtitle if available
+        if (subtitle && subtitle.trim() !== '') {
+            line += `${indent}    └─ ${subtitle}\n`;
+        }
+
+        // Add command line if available
+        if (commandLine && commandLine.trim() !== '') {
+            const unescapedCommandLine = this.unescapeForwardSlashes(commandLine);
+            line += `${indent}    └─ Command: ${unescapedCommandLine}\n`;
+        }
+
+        // Add associated alerts
+        if (item.associatedAlerts && Array.isArray(item.associatedAlerts) && item.associatedAlerts.length > 0) {
+            item.associatedAlerts.forEach(alert => {
+                if (alert.alertDisplayName) {
+                    line += `${indent}    └─ 🚨 Alert: ${alert.alertDisplayName}\n`;
+                }
+            });
+        }
+
+        return line;
+    }
+
+    /**
      * Copy analysis results to clipboard
      */
     copyAnalysisResults() {

@@ -68,6 +68,15 @@ Similar to PowerShell scripts you can also export command lines for use outside 
 > [!Tip]
 > The extract PowerShell scripts function honors the current zoom setting
 
+## Extract process tree
+
+Extract the currently visible process tree as text only representation, it will still contain icons (emoji) for the different type of nodes.
+
+![A screenshot showing the extracted process tree in a text only representation.](images/TextBasedProcessTree.png)
+
+> [!Tip]
+> The extract PowerShell scripts function honors the current zoom setting
+
 ## Process tree screenshot
 
 If you click **Screenshot** the complete process tree will be screenshotted and downloaded. This makes it super easy to share certain parts of the alert story as you want to present them.
@@ -78,3 +87,11 @@ If you click **Screenshot** the complete process tree will be screenshotted and 
 ## Attribution
 
 A big thank you to Christopher Hackenschmidt, for showing me the `story` API endpoint in the first place. Without his inspiration I would have not built this tool.
+
+## Version history
+
+| Version | Release date | Release notes                                                                            |
+| ------- | ------------ | ---------------------------------------------------------------------------------------- |
+| 1.0.2   | 2025-08-24   | Add new "Extract process tree as text" feature                                           |
+| 1.0.1   | 2025-08-24   | Improved CSS style to better use the available space and don't mess up the process tree. |
+| 1.0.0   | 2025-08-23   | Initial release                                                                          |
